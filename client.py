@@ -3,7 +3,9 @@ from html.parser import HTMLParser
 from datetime import datetime
 import time
 
-
+"""
+Jonathan Brodie and Tristan Leigh
+"""
 class Client(object):
 	"""docstring for Client"""
 	def __init__(self, arg=None):
@@ -24,20 +26,58 @@ class Client(object):
 	def display(self,page):
 		print(page.body)
 
+	def handle_response_code(self, response, headers):
+		status=response.status
+		if status == 200:
+			return None
+		elif status == 300 or status == 301 or status == 302 or status == 303 or status == 304 or status == 305 or status == 307:
+			location = headers["Location"]
+			return self.request(location)
+		else:
+			print("Something went wrong... Server returned response code: "+str(status))
+			return None
+
 	def request_cache_miss(self, url):
 		requesttime=datetime.now().timetuple()
+		request_body="/"
 		try:
+			if url.find("http") > -1:
+				if url.find("https://") > -1:
+					url=url[url.find("https://")+8:]
+				elif url.find("http://") > -1:
+					url=url[url.find("http://")+7:]
+			elif url.find("www") > -1:
+				url=url[url.find("www"):]
+
+			if url.find("com") > -1:
+				request_body=url[(url.find("com")+3):]
+				url=url[:url.find("com")+3]
+			elif url.find("edu") > -1:
+				request_body=url[(url.find("edu")+3):]
+				url=url[:url.find("edu")+3]
+			elif url.find("org") > -1:
+				request_body=url[(url.find("org")+3):]
+				url=url[:url.find("org")+3]
+			elif url.find("gov") > -1:
+				request_body=url[(url.find("gov")+3):]
+				url=url[:url.find("gov")+3]
 			self.current_connection = http.client.HTTPConnection(url)
 		except http.client.HTTPException as e:
 			print(e)
+		except http.client.URLError as e:
+			print(e)
 		
-		self.current_connection.request("GET","/")
+		self.current_connection.request("GET",request_body)
 		r1=self.current_connection.getresponse()
 		responsetime=datetime.now().timetuple()
 
 		headers=self.parse_header(r1.getheaders())
-		page = HTTPPage(headers,r1.read())
-		print(page.header)
+		check=self.handle_response_code(r1,headers)
+		page=None
+		if check is not None:
+			page=check
+		else:
+			page = HTTPPage(headers,r1.read())
 		page.requested_time=requesttime
 		page.response_time=responsetime
 		self.cache_page(url,page)
@@ -77,7 +117,6 @@ class Client(object):
 			datevalue=time.strptime(date_value, "%a, %d %b %Y %H:%M:%S %Z")
 
 			age=self.age_calculation(age_value,datevalue,requesttime,responsetime)
-			print(age)
 			freshness_lifetime=None
 			if "max-age" in self._cache[url].header:
 				expired=self._cache[url].header["max-age"]
@@ -132,7 +171,8 @@ class HTTPPage(HTMLParser):
 			self.script=False
 		elif "style" in tag:
 			self.style=False
-		self.put_body("\n")
+		if "div" in tag:
+			self.put_body("\n")
 
 	def handle_data(self, data):
 		self.put_body(data)	
