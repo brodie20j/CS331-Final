@@ -8,7 +8,7 @@ HTTP Client
 CS331
 Jonathan Brodie and Tristan Leigh
 All libraries above are owned by their respective owners, we only claim
-responsibility for code from this point on.
+ownership for code from this point on.
 """
 class Client(object):
 	def __init__(self):
